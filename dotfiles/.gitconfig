@@ -9,8 +9,6 @@
 [alias]
     lg = log --all --decorate --oneline --graph -30
     lga = log --all --decorate --oneline --graph
-    undo = reset HEAD~1
+    undo = reset --soft HEAD~1
     nah = !git reset --hard && git clean -df
-    fu = commit --fixup=HEAD
-    as = rebase --autosquash HEAD~2
-    fuas = !git commit --fixup=HEAD && git rebase --autosquash HEAD~2
+    fu = !git commit --fixup=HEAD && git rebase --autosquash HEAD~2

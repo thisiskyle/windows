@@ -12,15 +12,6 @@
             "command": 
             {
                 "action": "switchToTab",
-                "index": 0
-            },
-            "id": "User.switchToTab.D3F0B923",
-            "keys": "alt+1"
-        },
-        {
-            "command": 
-            {
-                "action": "switchToTab",
                 "index": 7
             },
             "id": "User.switchToTab.D7681B66",
@@ -127,6 +118,15 @@
             "command": 
             {
                 "action": "switchToTab",
+                "index": 0
+            },
+            "id": "User.switchToTab.D3F0B923",
+            "keys": "alt+1"
+        },
+        {
+            "command": 
+            {
+                "action": "switchToTab",
                 "index": 8
             },
             "id": "User.switchToTab.ED268D78",
@@ -181,19 +181,19 @@
             "command": 
             {
                 "action": "switchToTab",
-                "index": 6
+                "index": 5
             },
-            "id": "User.switchToTab.787314EB",
-            "keys": "alt+7"
+            "id": "User.switchToTab.75247157",
+            "keys": "alt+6"
         },
         {
             "command": 
             {
                 "action": "switchToTab",
-                "index": 5
+                "index": 6
             },
-            "id": "User.switchToTab.75247157",
-            "keys": "alt+6"
+            "id": "User.switchToTab.787314EB",
+            "keys": "alt+7"
         },
         {
             "command": 
