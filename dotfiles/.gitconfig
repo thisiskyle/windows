@@ -1,0 +1,16 @@
+[winUpdater]
+	recentlySeenVersion = 2.25.0.windows.1
+[user]
+	email = noreply
+	name = Kyle
+[core]
+	editor = nvim
+    autocrlf = true
+[alias]
+    lg = log --all --decorate --oneline --graph -30
+    lga = log --all --decorate --oneline --graph
+    undo = reset HEAD~1
+    nah = !git reset --hard && git clean -df
+    fu = commit --fixup=HEAD
+    as = rebase --autosquash HEAD~2
+    fuas = !git commit --fixup=HEAD && git rebase --autosquash HEAD~2
