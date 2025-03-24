@@ -6,6 +6,7 @@
 [core]
 	editor = nvim
     autocrlf = true
+	sshCommand = 'C:\\Windows\\System32\\OpenSSH\\ssh.exe'
 [alias]
     lg = log --all --decorate --oneline --graph -30
     lga = log --all --decorate --oneline --graph

@@ -7,9 +7,9 @@ function Log($message)
 
 function CopyFile($f, $p, $i)
 {
-    Log("$($f.FullName) --> $($finalFilePath)`n")
+    Log("$($f.FullName) --> $($p)`n")
 
-    Copy-Item -Recurse -Force -Path $f.FullName -Destination $finalFilePath
+    Copy-Item -Recurse -Force -Path $f.FullName -Destination $p
     if(-Not $i)
     {
         $script:updatedCount += 1
@@ -66,11 +66,21 @@ function DoBackup($job)
                     $finalDestinationDir = "$($destinations[$i])$($subpath)"
                 }
 
-                # create new destination structure using that list
-                $finalFilePath = "$($finalDestinationDir)\$($f.Name)"
 
                 # create all missing folders
                 New-Item -Path $finalDestinationDir -ItemType Directory -Force | Out-Null
+
+
+                if(-Not $finalDestinationDir.EndsWith("\"))
+                {
+                    $finalFilePath = "$($finalDestinationDir)\$($f.Name)"
+                }
+                else
+                {
+                    $finalFilePath = "$($finalDestinationDir)$($f.Name)"
+                }
+
+
 
                 # check if file exists
                 if (Test-Path $finalFilePath) 
