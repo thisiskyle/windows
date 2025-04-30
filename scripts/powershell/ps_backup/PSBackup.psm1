@@ -1,24 +1,90 @@
 
-function Log($message)
-{
+function Log() {
+    param(
+        [Parameter(Mandatory=$true)] [string] $message
+    )
+
     Write-Host $message -NoNewline
-    Add-Content -Path $($script:logFile) -Value $($message)
+    Add-Content -Path $($Script:logFile) -Value $message
 }
 
-function CopyFile($f, $p, $i)
-{
-    Log("$($f.FullName) --> $($p)`n")
+function CopyFiles() {
+    param(
+        [Parameter(Mandatory=$true)] 
+        [System.Collections.Hashtable] $table
+    )
 
-    Copy-Item -Recurse -Force -Path $f.FullName -Destination $p
-    if(-Not $i)
+    foreach($k in $table.Keys) 
     {
-        $script:updatedCount += 1
+        for (($i = 0); $i -lt $table[$k].Count; $i++)
+        {
+            $d = $table[$k][$i]
+
+            # create all missing folders
+            New-Item -Path $d -ItemType Directory -Force | Out-Null
+
+            $dPath = "$($d)$($k.Name)"
+
+            # check if file exists
+            if ((Test-Path $dPath) -and ($k.LastWriteTime -eq $(Get-Item -Force $dPath).LastWriteTime)) 
+            {
+            }
+            else 
+            {
+                Log -message "$($k.FullName) --> $($dPath)`n"
+                Copy-Item -Recurse -Force -Path $k.FullName -Destination $dPath
+
+                # todo: maybe we dont care about this
+                if($i -eq 0)
+                {
+                    $Script:updatedCount += 1
+                }
+            }
+        }
     }
 }
 
-function DoBackup($job)
+function FixDestinations() {
+    param(
+        [Parameter(Mandatory=$false)] [string] $subpath,
+        [Parameter(Mandatory=$true)] [array] $destinations
+    )
+
+    $Local:returnMe = (New-Object 'object[]' $destinations.Count)
+
+    for (($i = 0); $i -lt $destinations.Count; $i++)
+    {
+        # this is for the network drive, for some reason it doesnt add the backslash to the path
+        # so we just check and add one if needed
+        if(-Not $destinations[$i].EndsWith("\") -And -Not $subpath.StartsWith("\"))
+        {
+            $finalDestinationDir = "$($destinations[$i])\$($subpath)"
+        }
+        else
+        {
+            $finalDestinationDir = "$($destinations[$i])$($subpath)"
+        }
+
+        if(-Not $finalDestinationDir.EndsWith("\"))
+        {
+            $Local:returnMe[$i] = "$($finalDestinationDir)\"
+        }
+        else
+        {
+            $Local:returnMe[$i] = "$($finalDestinationDir)"
+        }
+    }
+
+    return $Local:returnMe
+}
+
+function RunJob()
 {
-    Log("`n--- Running Job: $($job.name) ---`n")
+    param(
+        [Parameter(Mandatory=$true)] [object] $job
+    )
+
+    Log -message "`n--- Running Job: $($job.name) ---`n"
 
     $sources = $job.sources
     $root = $job.sourceRoot
@@ -37,69 +103,22 @@ function DoBackup($job)
 
         if (-Not (Test-Path $s)) 
         {
-            Log("WARNING: Source $($s) does not exist`n")
+            Log -message "WARNING: Source $($s) does not exist`n"
             continue;
         }
 
         $files = Get-ChildItem $s -File -Recurse -Force
+        $Script:totalCount += $files.Count
+        $hash = @{}
 
-        # add to the total file count
-        $script:totalCount += $files.Count
-
-        # for every file in the list
         foreach ($f in $files)
         { 
-
             $subpath = "$($f.Directory)" -replace [regex]::escape($root), ""
-
-            for (($i = 0); $i -lt $destinations.Count; $i++)
-            {
-
-                # this is for the network drive, for some reason it doesnt add the backslash to the path
-                # so we just check and add one if needed
-                if(-Not $destinations[$i].EndsWith("\") -And -Not $subpath.StartsWith("\"))
-                {
-                    $finalDestinationDir = "$($destinations[$i])\$($subpath)"
-                }
-                else
-                {
-                    $finalDestinationDir = "$($destinations[$i])$($subpath)"
-                }
-
-
-                # create all missing folders
-                New-Item -Path $finalDestinationDir -ItemType Directory -Force | Out-Null
-
-
-                if(-Not $finalDestinationDir.EndsWith("\"))
-                {
-                    $finalFilePath = "$($finalDestinationDir)\$($f.Name)"
-                }
-                else
-                {
-                    $finalFilePath = "$($finalDestinationDir)$($f.Name)"
-                }
-
-
-
-                # check if file exists
-                if (Test-Path $finalFilePath) 
-                {
-                    # if the file exists, check the modified date
-                    if ($f.LastWriteTime -eq $(Get-Item -Force $finalFilePath).LastWriteTime)
-                    {
-                    }
-                    else
-                    {
-                        CopyFile($f, $finalFilePath, $i)
-                    }
-                }
-                else 
-                {
-                    CopyFile($f, $finalFilePath, $i)
-                }
-            }
+            $fixed = FixDestinations -subpath $subpath -destinations $destinations
+            $hash[$f] = @($fixed)
         }
+
+        CopyFiles -table $hash
     }
 }
 
@@ -122,17 +141,17 @@ function Start-PSBackup()
         New-Item -Path "$($HOME)\psbackup\log" -ItemType Directory -Force | Out-Null
     }
 
-    $script:logFile = "$($HOME)\psbackup\log\$(Get-Date -Format "yyyyMMdd_HHmm").txt"
+    $Script:logFile = "$($HOME)\psbackup\log\$(Get-Date -Format "yyyyMMdd_HHmm").txt"
 
-    if (-Not (Test-Path $script:logFile))
+    if (-Not (Test-Path $Script:logFile))
     {
-        New-Item -Path "$($script:logFile)" -ItemType File -Force | Out-Null
+        New-Item -Path "$($Script:logFile)" -ItemType File -Force | Out-Null
     }
 
     # if the jobfile is empty
     if($jobFileInfo -eq "")
     {
-        Log("`nERROR: No job file name provided`n")
+        Log -message "`nERROR: No job file name provided`n"
         return
     }
 
@@ -151,38 +170,38 @@ function Start-PSBackup()
 
     if (-Not (Test-Path $jobFile))
     {
-        Log("`nERROR: File '$($jobFile)' not found`n")
+        Log -message "`nERROR: File '$($jobFile)' not found`n"
         return
     }
 
-    Log("`n---------------- PSBackup --------------------------------`n")
-    Log("Start     $(Get-Date -Format "yyyy/MM/dd HH:mm")`n")
-    Log("Job File  $($jobFile)`n")
+    Log -message "`n---------------- PSBackup --------------------------------`n"
+    Log -message "Start     $(Get-Date -Format "yyyy/MM/dd HH:mm")`n"
+    Log -message "Job File  $($jobFile)`n"
 
     Start-Sleep -Milliseconds 1000
 
-    $script:jobs = Get-Content $jobFile | Out-String | ConvertFrom-Json
-    $script:totalCount = 0
-    $script:updatedCount = 0
-    $script:activeJobs = 0
-    $script:totalJobs = 0
+    $jobs = Get-Content $jobFile | Out-String | ConvertFrom-Json
+    $Script:totalCount = 0
+    $Script:updatedCount = 0
+    $Script:activeJobs = 0
+    $Script:totalJobs = 0
 
-    foreach ($script:j in $script:jobs)
+    foreach ($j in $jobs)
     {
-        if($script:j.active)
+        if($j.active)
         {
-            $script:activeJobs += 1
-            DoBackup($script:j)
+            $Script:activeJobs += 1
+            RunJob -job $j
         }
-        $script:totalJobs += 1
+        $Script:totalJobs += 1
     }
 
-    Log("`n------------------- Summary ---------------------------`n")
-    Log("End             $(Get-Date -Format "yyyy/MM/dd HH:mm")`n")
-    Log("Job File        $($jobFile)`n")
-    Log("Log File        $($logFile)`n")
-    Log("Active Jobs     $($script:activeJobs)/$($script:totalJobs)`n")
-    Log("Files Updated   $($script:updatedCount)/$($script:totalCount)`n")
+    Log -message "`n------------------- Summary ---------------------------`n"
+    Log -message "End             $(Get-Date -Format "yyyy/MM/dd HH:mm")`n"
+    Log -message "Job File        $($jobFile)`n"
+    Log -message "Log File        $($logFile)`n"
+    Log -message "Active Jobs     $($Script:activeJobs)/$($Script:totalJobs)`n"
+    Log -message "Files Updated   $($Script:updatedCount)/$($Script:totalCount)`n"
 }
 
 Export-ModuleMember -Function Start-PSBackup
